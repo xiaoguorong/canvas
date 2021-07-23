@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <canvas width="300" height="300" id="angle" style="background: red"></canvas>
+    <button onclick="getDifferAngle()">获取角度</button>
+    <script>
+        //获取绝对坐标和象限
+        function getAbsoluteCoordinates(x, y) {
+            if(x > 0) {
+                if( y > 0) {
+                    return {x: x, y: -y, quadrant: 4}
+                }else{
+                    return {x: x, y: Math.abs(y), quadrant: 1}
+                }
+            }else{
+                if( y > 0) {
+                    return {x: x, y: -y, quadrant: 3}
+                }else{
+                    return {x: x, y: Math.abs(y), quadrant: 2}
+                }
+            }
+        }
+        //到x正方向的角度
+        function getAngle(x, y) {
+            return Math.atan2(y, x) * 180 / Math.PI;
+        }
+        //获取角度和象限
+        function getDetail(differX, differY) {
+            let {x , y, quadrant} = getAbsoluteCoordinates(differX, differY)
+            let angle = getAngle(x, y)
+            return {angle, quadrant}
+        }
+        //画正方形
+        function drawCircle(x, y) {
+            ctx.beginPath();//开始一条路径，不写会圆和圆之间自动连线，每次绘图只要不move，笔默认落下的，多以会有轨迹
+            ctx.fillStyle = "#fff"; 
+            ctx.globalCompositeOperation = "destination-over";//因为线的起点在圆中间，不让圆里面不显示线，所以设置
+            ctx.fillRect(x - 3, y - 3, 6, 6);
+            ctx.strokeRect(x - 3, y - 3, 6, 6);
+        }
+        //画线
+        function drawLine(pervX, pervY, x, y) {
+            ctx.moveTo(pervX, pervY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        //canvas画
+        function draw() {
+            spotList.map((v, i) => {
+                drawCircle(v.x, v.y)
+                if(i > 0) {
+                    const pervX = spotList[i - 1].x;
+                    const pervY = spotList[i - 1].y;
+                    drawLine(pervX, pervY, v.x, v.y);
+                }
+            })
+        }
+        //计算角度差获取角度
+        function getDifferAngle() {
+            let differX0 = spotList[0].x - spotList[1].x;
+            let differX2 = spotList[2].x - spotList[1].x;
+            let differY0 = spotList[0].y - spotList[1].y;
+            let differY2 = spotList[2].y - spotList[1].y;
+            if(getDetail(differX0, differY0).quadrant == getDetail(differX2, differY2).quadrant || 
+            (getDetail(differX0, differY0).quadrant == 1 && getDetail(differX2, differY2).quadrant == 2) || 
+            (getDetail(differX0, differY0).quadrant == 2 && getDetail(differX2, differY2).quadrant == 1) ||
+            (getDetail(differX0, differY0).quadrant == 3 && getDetail(differX2, differY2).quadrant == 4) ||
+            (getDetail(differX0, differY0).quadrant == 4 && getDetail(differX2, differY2).quadrant == 3)){
+                differAngle = Math.abs(Math.abs(getDetail(differX0, differY0).angle) - Math.abs(getDetail(differX2, differY2).angle))
+            }else if((getDetail(differX0, differY0).quadrant == 1 && getDetail(differX2, differY2).quadrant == 3) ||
+            (getDetail(differX0, differY0).quadrant == 2 && getDetail(differX2, differY2).quadrant == 4) || 
+            (getDetail(differX0, differY0).quadrant == 4 && getDetail(differX2, differY2).quadrant == 2) ||
+            (getDetail(differX0, differY0).quadrant == 3 && getDetail(differX2, differY2).quadrant == 1) || 
+            (getDetail(differX0, differY0).quadrant == 1 && getDetail(differX2, differY2).quadrant == 3) ||  
+            (getDetail(differX0, differY0).quadrant == 4 && getDetail(differX2, differY2).quadrant == 1)){
+                differAngle = Math.abs(getDetail(differX0, differY0).angle) + Math.abs(getDetail(differX2, differY2).angle)
+            }else if((getDetail(differX0, differY0).quadrant == 2 && getDetail(differX2, differY2).quadrant == 3) || 
+            (getDetail(differX0, differY0).quadrant == 3 && getDetail(differX2, differY2).quadrant == 2)) {
+                differAngle = 360 - Math.abs(getDetail(differX2, differY2).angle) - Math.abs(getDetail(differX0, differY0).angle)
+            }
+            if(differAngle > 180) differAngle = 360 - differAngle //取小角度
+            alert(parseInt(differAngle)+"°")
+            return parseInt(differAngle);
+        }
+
+        let c = document.querySelector("#angle");
+        let ctx = c.getContext("2d")
+        let spotList = [];//点坐标集合
+        let differAngle = 0;//相差的角度
+        let index = "";//按下的点索引
+        c.onclick = function (e) {
+            //限制三个点
+            if(spotList.length >= 3) return;
+            //获取点的左边
+            const x = e.offsetX
+            const y = e.offsetY
+            spotList.push({x, y})
+            drawCircle(x, y)
+            if(spotList.length > 1) {
+                const pervX = spotList[spotList.length - 2].x;
+                const pervY = spotList[spotList.length - 2].y;
+                drawLine(pervX, pervY, x, y);
+            }
+            if(spotList.length == 3) {
+                // getDifferAngle();
+            }
+        }
+        c.onmousedown = function(e) {  
+            const x = e.offsetX;
+            const y = e.offsetY;
+            //判断点击的是否在正方形内并且是哪个点
+            index = null
+            spotList.map((v , i) => {
+                if(x >= v.x - 3 && x < v.x + 3 && y >= v.y -3 && y < v.y + 3) {
+                    index = i;
+                }
+            })
+            if(index != 0 && index != 1 && index != 2) return;//按下非正方向时停止
+            document.onmousemove = function(e) {  
+                let x = e.offsetX;
+                let y = e.offsetY;
+                //限制拖拽区域
+                if(x < 0){  
+                    x = 0;  
+                }else if(x > c.offsetWidth - 3){  
+                    x = c.offsetWidth - 3;  
+                }  
+                if(y < 0){  
+                    y = 0;  
+                }else if(y > c.offsetHeight - 3){  
+                    y = c.offsetHeight - 3
+                }  
+                spotList[index].x = x;
+                spotList[index].y = y;
+                ctx.clearRect(0,0,c.width,c.height);  
+                draw();  
+            };  
+            document.onmouseup = function(e) { //当鼠标弹起来的时候不再移动 
+                this.onmousemove = null;  
+                this.onmouseup = null; //预防鼠标弹起来后还会循环（即预防鼠标放上去的时候还会移动） 
+                if(spotList.length === 3) {
+                    // getDifferAngle();
+                } 
+            };  
+        };   
+    </script>
+</body>
+</html>
